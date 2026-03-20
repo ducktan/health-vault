@@ -1,0 +1,44 @@
+/* AUTH PAGE */
+
+.hv-auth{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.hv-auth-card{
+  width:420px;
+  background:white;
+  padding:40px;
+  border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.08);
+}
+
+.hv-auth-card h2{
+  text-align:center;
+  margin-bottom:25px;
+}
+
+.hv-auth-btn{
+  width:100%;
+  margin-top:10px;
+}
+
+.hv-auth-link{
+  text-align:center;
+  margin-top:18px;
+}
+
+.hv-auth-link a{
+  color:var(--hv-primary);
+  text-decoration:none;
+  font-weight:500;
+}
+
+.hv-auth-desc{
+  text-align:center;
+  font-size:14px;
+  margin-bottom:20px;
+  color:#666;
+}

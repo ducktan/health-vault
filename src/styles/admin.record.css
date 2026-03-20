@@ -1,0 +1,60 @@
+.hv-page-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding-bottom: 20px;
+  padding-top: 20px;
+}
+
+.hv-search-bar{
+  display:flex;
+  gap:12px;
+  margin-bottom:20px;
+}
+
+.hv-search-input{
+  padding:10px;
+  border:1px solid #ddd;
+  border-radius:6px;
+  width:250px;
+}
+
+.hv-filter{
+  padding:10px;
+  border:1px solid #ddd;
+  border-radius:6px;
+}
+
+.hv-table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.hv-table th,
+.hv-table td{
+  padding:12px;
+  border-bottom:1px solid #eee;
+  text-align:left;
+}
+
+.hv-table th{
+  background:#f8f9fa;
+}
+
+.hv-actions{
+  display:flex;
+  gap:8px;
+}
+
+.hv-status-active{
+  color:#2e7d32;
+  font-weight:500;
+}
+
+.hv-btn-warning{
+  background:#ff9800;
+  border:none;
+  color:white;
+  padding:6px 12px;
+  border-radius:6px;
+}
