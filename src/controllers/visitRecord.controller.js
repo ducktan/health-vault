@@ -6,15 +6,22 @@ const Patient = require('../models/patient.model');
 // POST /visit-records
 const createVisitRecord = async (req, res) => {
   try {
-    const { medical_record_id, context } = req.body;
+    const {
+      medical_record_id,
+      symptoms,
+      diagnosis,
+      treatment,
+      note
+    } = req.body;
 
-    if (!medical_record_id || !context) {
+    if (!medical_record_id || !symptoms || !diagnosis || !treatment) {
       return res.status(400).json({
-        message: 'medical_record_id and context are required'
+        message: 'Missing required fields'
       });
     }
 
     const medicalRecord = await MedicalRecord.findById(medical_record_id);
+
     if (!medicalRecord) {
       return res.status(404).json({ message: 'Medical record not found' });
     }
@@ -22,7 +29,10 @@ const createVisitRecord = async (req, res) => {
     const visit = await VisitRecord.create({
       medical_record_id,
       doctor_id: req.user.id,
-      context
+      symptoms,
+      diagnosis,
+      treatment,
+      note
     });
 
     res.status(201).json({
@@ -36,8 +46,6 @@ const createVisitRecord = async (req, res) => {
   }
 };
 
-
-// GET /visit-records/:id
 const getVisitRecordDetail = async (req, res) => {
   try {
     const { id } = req.params;
@@ -56,19 +64,16 @@ const getVisitRecordDetail = async (req, res) => {
       return res.status(404).json({ message: 'Visit record not found' });
     }
 
-    // patient chỉ xem record của mình
+    // 🔒 patient chỉ xem của mình
     if (req.user.role === 'patient') {
       const patient = await Patient.findOne({
         user_id: req.user.id
       });
 
-      if (!patient) {
-        return res.status(403).json({ message: 'Forbidden' });
-      }
-
       if (
+        !patient ||
         patient._id.toString() !==
-        visit.medical_record_id.patient_id._id.toString()
+          visit.medical_record_id.patient_id._id.toString()
       ) {
         return res.status(403).json({ message: 'Forbidden' });
       }
@@ -82,12 +87,16 @@ const getVisitRecordDetail = async (req, res) => {
   }
 };
 
-
-// PUT /visit-records/:id
 const updateVisitRecord = async (req, res) => {
   try {
     const { id } = req.params;
-    const { context } = req.body;
+
+    const {
+      symptoms,
+      diagnosis,
+      treatment,
+      note
+    } = req.body;
 
     const visit = await VisitRecord.findById(id);
 
@@ -95,12 +104,17 @@ const updateVisitRecord = async (req, res) => {
       return res.status(404).json({ message: 'Visit record not found' });
     }
 
-    // chỉ doctor tạo record mới update được
+    // 🔒 chỉ doctor tạo mới sửa được
     if (visit.doctor_id.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'You cannot update this record' });
+      return res.status(403).json({ message: 'Forbidden' });
     }
 
-    visit.context = context || visit.context;
+    // update từng field
+    if (symptoms) visit.symptoms = symptoms;
+    if (diagnosis) visit.diagnosis = diagnosis;
+    if (treatment) visit.treatment = treatment;
+    if (note !== undefined) visit.note = note;
+
     await visit.save();
 
     res.json({
@@ -114,8 +128,6 @@ const updateVisitRecord = async (req, res) => {
   }
 };
 
-
-// DELETE /visit-records/:id
 const deleteVisitRecord = async (req, res) => {
   try {
     const { id } = req.params;
@@ -127,7 +139,7 @@ const deleteVisitRecord = async (req, res) => {
     }
 
     if (visit.doctor_id.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'You cannot delete this record' });
+      return res.status(403).json({ message: 'Forbidden' });
     }
 
     await visit.deleteOne();
@@ -142,8 +154,6 @@ const deleteVisitRecord = async (req, res) => {
   }
 };
 
-
-// GET /medical-records/:id/visits
 const getVisitsByMedicalRecord = async (req, res) => {
   try {
     const { id } = req.params;
@@ -158,7 +168,7 @@ const getVisitsByMedicalRecord = async (req, res) => {
       return res.status(404).json({ message: 'Medical record not found' });
     }
 
-    // patient chỉ xem hồ sơ của mình
+    // 🔒 patient check
     if (req.user.role === 'patient') {
       if (
         !medicalRecord.patient_id.user_id ||

@@ -1,14 +1,22 @@
 const express = require('express');
 const app = express();
-
-app.use(express.json());
-
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const authRoutes = require('./routes/auth.route');
 const userRoutes = require('./routes/user.route');
 const adminRoutes = require('./routes/admin.user.route');
 const patientRoutes = require('./routes/patient.route');
 const medicalRecordRoutes = require('./routes/medicalRecord.route');
 const visitRecordRoutes = require('./routes/visitRecord.route');
+
+
+
+app.use(express.json());
+app.use(cookieParser());
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
 
 
 app.use('/api/auth', authRoutes);

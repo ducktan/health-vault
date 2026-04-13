@@ -13,6 +13,7 @@ const {
 
 // 👇 bắt buộc admin
 router.use(verifyToken, authorize('admin'));
+// router.use(verifyToken);
 
 router.get('/users', getUsers);
 router.post('/users', createUser);

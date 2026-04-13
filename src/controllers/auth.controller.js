@@ -16,13 +16,7 @@ const register = async (req, res) => {
       username,
       password,
       fullname,
-      email,
-      role,
-      cccd,
-      dob,
-      gender,
-      phone,
-      address
+      email
     } = req.body;
 
     // 1. Validate
@@ -50,23 +44,10 @@ const register = async (req, res) => {
       password: hashedPassword,
       fullname,
       email,
-      role: role || 'patient'
+      role: 'patient'
     }], { session });
 
     const userId = newUser[0]._id;
-
-    // 5. Nếu là patient → tạo Patient
-    if ((role || 'patient') === 'patient') {
-      await Patient.create([{
-        user_id: userId,
-        fullname,
-        cccd,
-        dob,
-        gender,
-        phone,
-        address
-      }], { session });
-    }
 
     await session.commitTransaction();
 
@@ -86,75 +67,82 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { username, password } = req.body || {};
+    const { identifier, password } = req.body || {};
 
-    // 1. Validate
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Missing credentials' });
+    if (!identifier || !password) {
+      return res.status(400).json({
+        message: "Missing credentials"
+      });
     }
 
-    // 2. Find user
-    const user = await User.findOne({ username });
+    const user = await User.findOne({
+      $or: [{ email: identifier }, { username: identifier }]
+    }).select("+password");
+
     if (!user) {
-      return res.status(400).json({ message: 'Invalid username or password' });
+      return res.status(400).json({
+        message: "Invalid credentials"
+      });
     }
 
-    // 3. Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid username or password' });
+      return res.status(400).json({
+        message: "Invalid credentials"
+      });
     }
 
-    // 4. Generate JWT
-    const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role
-      },
+    // ACCESS TOKEN (short)
+    const accessToken = jwt.sign(
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES || '1d' }
+      { expiresIn: process.env.ACCESS_TOKEN_EXPIRES || "15m" }
     );
 
+    // REFRESH TOKEN (long)
+    const refreshToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: process.env.REFRESH_TOKEN_EXPIRES || "7d" }
+    );
+
+    // gửi refresh token qua cookie
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: false, // dev
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
     return res.json({
-      message: 'Login success',
-      token,
+      message: "Login success",
+      accessToken,
       user: {
         id: user._id,
+        email: user.email,
         username: user.username,
         fullname: user.fullname,
-        role: user.role
+        role: user.role, 
+        department: user.department || null
       }
     });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 const logout = async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
+    res.clearCookie("refreshToken");
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(400).json({ message: 'No token provided' });
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    // decode để lấy exp
-    const decoded = jwt.decode(token);
-
-    await TokenBlacklist.create({
-      token,
-      expiresAt: new Date(decoded.exp * 1000)
+    return res.json({
+      message: "Logout success"
     });
 
-    return res.json({ message: 'Logout success' });
-
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -245,5 +233,36 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const refreshToken = async (req, res) => {
+  try {
+    const token = req.cookies.refreshToken;
 
-module.exports = { register, login, logout, forgotPassword, resetPassword };
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+
+    // Lấy role từ DB
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    const newAccessToken = jwt.sign(
+      { id: user._id, role: user.role },  // ✅ thêm role
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.ACCESS_TOKEN_EXPIRES || "15m" }
+    );
+
+    return res.json({
+      accessToken: newAccessToken
+    });
+
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid refresh token" });
+  }
+};
+
+
+module.exports = { register, login, logout, forgotPassword, resetPassword, refreshToken };

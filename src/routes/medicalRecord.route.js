@@ -8,7 +8,7 @@ const authorize = require('../middlewares/role.middleware');
 
 router.post('/', verifyToken, authorize('doctor'), medicalRecordController.createMedicalRecord);
 
-router.get('/', verifyToken, authorize('doctor'), medicalRecordController.getMedicalRecords);
+router.get('/', verifyToken, authorize('doctor', 'patient'), medicalRecordController.getMedicalRecords);
 
 router.get('/:id', verifyToken, authorize('doctor', 'patient'), medicalRecordController.getMedicalRecordDetail);
 

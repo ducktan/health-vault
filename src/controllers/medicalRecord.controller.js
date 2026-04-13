@@ -26,7 +26,9 @@ const createMedicalRecord = async (req, res) => {
     }
 
     const record = await MedicalRecord.create({
-      patient_id
+      patient_id,
+      assigned_doctor_id: req.user.id,
+      department: req.user.department || "Chưa xác định"
     });
 
     return res.status(201).json({
@@ -44,18 +46,45 @@ const createMedicalRecord = async (req, res) => {
 // GET /medical-records
 const getMedicalRecords = async (req, res) => {
   try {
-    const records = await MedicalRecord.find()
-      .populate({
-        path: 'patient_id',
-        select: 'fullname phone gender'
+    let records;
+
+    // 👨‍⚕️ doctor → xem tất cả
+    if (req.user.role === "doctor") {
+      records = await MedicalRecord.find()
+        .populate({
+          path: "patient_id",
+          select: "fullname phone gender cccd dob"
+        })
+        .sort({ createdAt: -1 });
+    }
+
+    // 🧑‍🤝‍🧑 patient → chỉ xem của mình
+    if (req.user.role === "patient") {
+      const patient = await Patient.findOne({
+        user_id: req.user.id
+      });
+
+      if (!patient) {
+        return res.status(404).json({
+          message: "Patient not found"
+        });
+      }
+
+      records = await MedicalRecord.find({
+        patient_id: patient._id
       })
-      .sort({ createdAt: -1 });
+        .populate({
+          path: "patient_id",
+          select: "fullname phone gender cccd dob"
+        })
+        .sort({ createdAt: -1 });
+    }
 
     return res.json(records);
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -68,7 +97,7 @@ const getMedicalRecordDetail = async (req, res) => {
     const record = await MedicalRecord.findById(id)
       .populate({
         path: 'patient_id',
-        select: 'fullname dob gender phone address user_id'
+        select: 'fullname dob gender phone address cccd'
       });
 
     if (!record) {
