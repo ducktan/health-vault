@@ -1,0 +1,77 @@
+/* CARD */
+.hv-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  margin-bottom: 20px;
+}
+
+/* TITLE */
+.hv-card h3 {
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* LIST CONTAINER */
+.hv-visit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ITEM */
+.hv-visit-item {
+  position: relative;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  transition: all 0.2s ease;
+}
+
+/* LEFT TIMELINE DOT */
+.hv-visit-item::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 18px;
+  width: 8px;
+  height: 8px;
+  background: #3b82f6;
+  border-radius: 50%;
+}
+
+/* HOVER */
+.hv-visit-item:hover {
+  background: #eef4ff;
+  border-color: #c7d2fe;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.15);
+}
+
+/* ACTIVE (optional nếu mày thêm selected) */
+.hv-visit-item.active {
+  background: #e0ecff;
+  border-color: #3b82f6;
+}
+
+/* TEXT */
+.hv-visit-time {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.hv-visit-doctor {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.hv-visit-diagnosis {
+  font-size: 14px;
+  margin-top: 6px;
+  color: #334155;
+}
