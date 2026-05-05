@@ -4,7 +4,7 @@ import { api } from "./api";
 // GET list visit theo medical_record_id
 export const getVisitsByMedicalRecordApi = async (accessToken, recordId) => {
   return await api(
-    `/visit/medical-record/${recordId}`,
+    `/medical/${recordId}/visits`,
     {},
     accessToken
   );
@@ -49,6 +49,18 @@ export const deleteVisitApi = async (accessToken, id) => {
     `/visit/${id}`,
     {
       method: "DELETE",
+    },
+    accessToken
+  );
+};
+
+export const exportVisitPdfApi = async (accessToken, payload) => {
+  return await api(
+    `/visit/export-pdf`, 
+    {
+      method: "POST",
+      data: payload, // 🔥 gửi thẳng payload
+      responseType: "blob"
     },
     accessToken
   );

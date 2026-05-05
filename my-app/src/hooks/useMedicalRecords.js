@@ -39,7 +39,6 @@ export const useMedicalRecords = () => {
 
   // CREATE
   const createRecord = async (patient_id) => {
-    console.log("Creating record for patient_id:", patient_id);
     if (!accessToken) return;
 
     setLoading(true);

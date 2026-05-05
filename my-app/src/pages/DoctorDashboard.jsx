@@ -20,7 +20,6 @@ const DoctorDashboard = () => {
   const [sort, setSort] = useState("newest");
 
   const { user } = useAuth();
-  console.log("DoctorDashboard user:", user);
   const { createPatient } = usePatient();
   const { records, loading, deleteRecord, fetchRecords } =
     useMedicalRecords();

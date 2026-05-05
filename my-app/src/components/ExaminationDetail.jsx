@@ -1,6 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
+import { useVisitRecord } from "../hooks/useVisitRecord";
 
-const ExaminationDetail = ({ visit }) => {
+const ExaminationDetail = ({ visit, patient_id }) => {
+  const { exportSignedPdf } = useVisitRecord();
+  const [loading, setLoading] = useState(false);
+
   if (!visit) {
     return (
       <div className="hv-card">
@@ -10,11 +14,46 @@ const ExaminationDetail = ({ visit }) => {
     );
   }
 
+  const handleExport = async () => {
+    try {
+      setLoading(true);
+
+      const payload = {
+        patient_id: patient_id,
+        symptoms: visit.symptoms,
+        diagnosis: visit.diagnosis,
+        treatment: visit.treatment,
+        note: visit.note,
+        doctor_name: visit.doctor_id?.fullname,
+        created_at: new Date(visit.createdAt).toLocaleString()
+      };
+
+      console.log("Data gửi BE:", payload);
+      const blob = await exportSignedPdf(payload);
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "benh_an_signed.pdf";
+      a.click();
+
+    } catch (err) {
+      console.error(err);
+      alert("Xuất PDF thất bại");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="hv-card">
       <h3>Chi tiết khám bệnh</h3>
 
       <div className="hv-record-grid">
+        <div>
+          <label>Khoa</label>
+          <p>{visit.department || "—"}</p>
+        </div>
 
         <div>
           <label>Triệu chứng</label>
@@ -45,7 +84,17 @@ const ExaminationDetail = ({ visit }) => {
           <label>Thời gian</label>
           <p>{new Date(visit.createdAt).toLocaleString()}</p>
         </div>
+      </div>
 
+      {/* 🔥 BUTTON */}
+      <div style={{ marginTop: 20 }}>
+        <button
+          className="hv-btn-primary"
+          onClick={handleExport}
+          disabled={loading}
+        >
+          {loading ? "Đang ký..." : "Ký & Xuất PDF"}
+        </button>
       </div>
     </div>
   );

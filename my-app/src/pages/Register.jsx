@@ -5,7 +5,6 @@ import "../styles/auth.css";
 
 const Register = () => {
   const { register } = useAuth();
-  console.log(register);
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -19,19 +18,63 @@ const Register = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // ===== SANITIZE =====
+  const sanitizeInput = (value) => {
+    return value.replace(/[<>$]/g, "");
+  };
+
+  // ===== HANDLE CHANGE =====
   const handleChange = (e) => {
+    const { name, value } = e.target;
+
     setForm({
       ...form,
-      [e.target.name]: e.target.value
+      [name]: sanitizeInput(value)
     });
   };
 
+  // ===== VALIDATE =====
+  const validateForm = () => {
+    const { username, fullname, email, password, confirmPassword } = form;
+
+    // username
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(username)) {
+      return "Username chỉ gồm chữ, số, _ (3-20 ký tự)";
+    }
+
+    // fullname
+    if (fullname.trim().length < 2) {
+      return "Họ tên không hợp lệ";
+    }
+
+    // email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return "Email không hợp lệ";
+    }
+
+    // password
+    if (password.length < 6) {
+      return "Mật khẩu tối thiểu 6 ký tự";
+    }
+
+    // confirm password
+    if (password !== confirmPassword) {
+      return "Mật khẩu không khớp";
+    }
+
+    return null;
+  };
+
+  // ===== SUBMIT =====
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (form.password !== form.confirmPassword) {
-      setError("Mật khẩu không khớp");
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -39,20 +82,16 @@ const Register = () => {
       setLoading(true);
 
       await register(
-        form.username,
+        form.username.trim(),
         form.password,
-        form.fullname,
-        form.email
+        form.fullname.trim(),
+        form.email.trim().toLowerCase()
       );
 
-      navigate("/"); // đã login
+      navigate("/"); // đăng ký xong -> chuyển trang
 
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Đăng ký thất bại");
-      }
+      setError(err?.message || "Đăng ký thất bại");
     } finally {
       setLoading(false);
     }

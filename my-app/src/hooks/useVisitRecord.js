@@ -4,6 +4,7 @@ import {
   getVisitsByMedicalRecordApi,
   createVisitApi,
   deleteVisitApi,
+  exportVisitPdfApi
 } from "../services/visitRecordService";
 import { AuthContext } from "../context/AuthContextObj";
 
@@ -30,7 +31,6 @@ export const useVisitRecord = () => {
 
   // CREATE visit
   const createVisit = async (formData) => {
-    console.log("Creating visit with data:", formData);
     if (!accessToken) return;
 
     setLoading(true);
@@ -64,6 +64,9 @@ export const useVisitRecord = () => {
       setLoading(false);
     }
   };
+ const exportSignedPdf = async (payload) => {
+    return await exportVisitPdfApi(accessToken, payload);
+  };
 
   return {
     visits,
@@ -71,5 +74,6 @@ export const useVisitRecord = () => {
     fetchVisits,
     createVisit,
     deleteVisit,
+    exportSignedPdf
   };
 };

@@ -51,6 +51,8 @@ const RecordDetail = () => {
           <div>Đang tải thông tin bệnh nhân...</div>
         ) : (
           <PatientCard patient={record?.patient_id} />
+          
+          
         )}
 
         {/* ========================= */}
@@ -63,7 +65,7 @@ const RecordDetail = () => {
         {/* ========================= */}
         {/* EXAM DETAIL */}
         {/* ========================= */}
-        <ExaminationDetail visit={selectedVisit} />
+        <ExaminationDetail visit={selectedVisit} patient_id={record?.patient_id._id} />
 
       </div>
 
