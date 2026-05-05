@@ -1,10 +1,17 @@
 const VisitRecord = require('../models/visitRecord.model');
 const MedicalRecord = require('../models/medicalRecord.model');
 const Patient = require('../models/patient.model');
+const User = require('../models/user.model');
+
+const { encryptData, decryptData, exportSignedPdf } = require('../services/crypto.service');
+const { Readable } = require("stream");
 
 
-// POST /visit-records
+// =======================
+// CREATE
+// =======================
 const createVisitRecord = async (req, res) => {
+
   try {
     const {
       medical_record_id,
@@ -20,19 +27,54 @@ const createVisitRecord = async (req, res) => {
       });
     }
 
-    const medicalRecord = await MedicalRecord.findById(medical_record_id);
+    // 🔥 lấy medical record + patient
+    const medicalRecord = await MedicalRecord.findById(medical_record_id)
+      .populate({
+        path: 'patient_id',
+        select: 'user_id'
+      });
 
     if (!medicalRecord) {
       return res.status(404).json({ message: 'Medical record not found' });
     }
 
-    const visit = await VisitRecord.create({
-      medical_record_id,
-      doctor_id: req.user.id,
+    // 🔥 lấy doctor
+    const doctor = await User.findById(req.user.id);
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(403).json({ message: 'Only doctor can create visit' });
+    }
+
+    // 🔥 lấy patient_id để build policy
+    const patientUserId = medicalRecord.patient_id?.user_id?.toString();
+
+    if (!patientUserId) {
+      return res.status(400).json({ message: 'Patient not found' });
+    }
+
+    // 🔐 encrypt (THÊM patient_id)
+    const sensitiveData = {
       symptoms,
       diagnosis,
       treatment,
-      note
+      note,
+      patient_id: patientUserId   // 🔥 QUAN TRỌNG
+    };
+    const encrypted = await encryptData(
+      doctor.department,
+      sensitiveData
+    );
+
+
+    // 🔥 lưu DB (KHÔNG lưu patient_id plaintext)
+    const visit = await VisitRecord.create({
+      medical_record_id,
+      doctor_id: doctor._id,
+      department: doctor.department,
+
+      ciphertext: encrypted.ciphertext,
+      nonce: encrypted.nonce,
+      tag: encrypted.tag,
+      abe_key: encrypted.abe_key
     });
 
     res.status(201).json({
@@ -46,6 +88,10 @@ const createVisitRecord = async (req, res) => {
   }
 };
 
+
+// =======================
+// GET DETAIL
+// =======================
 const getVisitRecordDetail = async (req, res) => {
   try {
     const { id } = req.params;
@@ -73,13 +119,33 @@ const getVisitRecordDetail = async (req, res) => {
       if (
         !patient ||
         patient._id.toString() !==
-          visit.medical_record_id.patient_id._id.toString()
+        visit.medical_record_id.patient_id._id.toString()
       ) {
         return res.status(403).json({ message: 'Forbidden' });
       }
     }
 
-    res.json(visit);
+    // 🔐 decrypt
+    const result = await decryptData(req.user, {
+      ciphertext: visit.ciphertext,
+      nonce: visit.nonce,
+      tag: visit.tag,
+      abe_key: visit.abe_key
+    });
+
+    if (!result.success) {
+      return res.status(403).json({ message: 'Access denied (ABE)' });
+    }
+
+    res.json({
+      ...visit.toObject(),
+
+      // trả plaintext cho FE
+      symptoms: result.data.symptoms,
+      diagnosis: result.data.diagnosis,
+      treatment: result.data.treatment,
+      note: result.data.note
+    });
 
   } catch (err) {
     console.error(err);
@@ -87,6 +153,10 @@ const getVisitRecordDetail = async (req, res) => {
   }
 };
 
+
+// =======================
+// UPDATE
+// =======================
 const updateVisitRecord = async (req, res) => {
   try {
     const { id } = req.params;
@@ -104,22 +174,32 @@ const updateVisitRecord = async (req, res) => {
       return res.status(404).json({ message: 'Visit record not found' });
     }
 
-    // 🔒 chỉ doctor tạo mới sửa được
     if (visit.doctor_id.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    // update từng field
-    if (symptoms) visit.symptoms = symptoms;
-    if (diagnosis) visit.diagnosis = diagnosis;
-    if (treatment) visit.treatment = treatment;
-    if (note !== undefined) visit.note = note;
+    // 🔐 encrypt lại
+    const sensitiveData = {
+      symptoms,
+      diagnosis,
+      treatment,
+      note
+    };
+
+    const encrypted = await encryptData(
+      visit.department,
+      sensitiveData
+    );
+
+    visit.ciphertext = encrypted.ciphertext;
+    visit.nonce = encrypted.nonce;
+    visit.tag = encrypted.tag;
+    visit.abe_key = encrypted.abe_key;
 
     await visit.save();
 
     res.json({
-      message: 'Visit record updated',
-      data: visit
+      message: 'Visit record updated'
     });
 
   } catch (err) {
@@ -128,6 +208,10 @@ const updateVisitRecord = async (req, res) => {
   }
 };
 
+
+// =======================
+// DELETE
+// =======================
 const deleteVisitRecord = async (req, res) => {
   try {
     const { id } = req.params;
@@ -154,15 +238,22 @@ const deleteVisitRecord = async (req, res) => {
   }
 };
 
+
+// =======================
+// LIST BY MEDICAL RECORD
+// =======================
 const getVisitsByMedicalRecord = async (req, res) => {
   try {
+
     const { id } = req.params;
+
 
     const medicalRecord = await MedicalRecord.findById(id)
       .populate({
         path: 'patient_id',
         select: 'user_id fullname'
       });
+
 
     if (!medicalRecord) {
       return res.status(404).json({ message: 'Medical record not found' });
@@ -184,11 +275,93 @@ const getVisitsByMedicalRecord = async (req, res) => {
       .populate('doctor_id', 'fullname')
       .sort({ createdAt: -1 });
 
-    res.json(visits);
+    const results = [];
+
+    const doctor = await User.findById(req.user.id);
+   
+
+
+    for (const visit of visits) {
+      const result = await decryptData({
+        ...req.user,
+        department: doctor.department
+      }, {
+        ciphertext: visit.ciphertext,
+        nonce: visit.nonce,
+        tag: visit.tag,
+        abe_key: visit.abe_key
+      });
+
+      const obj = visit.toObject();
+
+      // ❌ không trả encrypted data
+      delete obj.ciphertext;
+      delete obj.nonce;
+      delete obj.tag;
+      delete obj.abe_key;
+
+      if (result.success) {
+        results.push({
+          ...obj,
+          symptoms: result.data.symptoms,
+          diagnosis: result.data.diagnosis,
+          treatment: result.data.treatment,
+          note: result.data.note,
+          accessible: true
+        });
+      } else {
+        // 🔥 UX thân thiện
+        results.push({
+          ...obj,
+          symptoms: "Bạn không có quyền xem thông tin khám bệnh theo chính sách bảo mật của bệnh viện",
+          diagnosis: null,
+          treatment: null,
+          note: null,
+          accessible: false
+        });
+      }
+    }
+
+    res.json(results);
 
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// DSA
+// =======================
+// EXPORT SIGNED PDF
+// =======================
+const exportVisitRecordPDF = async (req, res) => {
+  try {
+    const data = req.body;
+    console.log("Export PDF data:", req.body);
+
+    if (!data) {
+      return res.status(400).json({ message: "Missing data" });
+    }
+
+    // 🔥 call service
+    const response = await exportSignedPdf(req.user, data);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=benh_an_signed.pdf"
+    );
+
+    if (response.body) {
+      const stream = Readable.fromWeb(response.body);
+      stream.pipe(res);
+    } else {
+      return res.status(500).json({ message: "Stream error" });
+    }
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Export PDF failed" });
   }
 };
 
@@ -198,5 +371,6 @@ module.exports = {
   getVisitRecordDetail,
   updateVisitRecord,
   deleteVisitRecord,
-  getVisitsByMedicalRecord
+  getVisitsByMedicalRecord, 
+  exportVisitRecordPDF
 };

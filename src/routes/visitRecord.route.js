@@ -26,19 +26,21 @@ router.put(
   visitController.updateVisitRecord
 );
 
-router.delete(
-  '/:id',
-  verifyToken,
-  authorize('doctor'),
-  visitController.deleteVisitRecord
-);
+router.post("/export-pdf", verifyToken, visitController.exportVisitRecordPDF);
+
+// router.delete(
+//   '/:id',
+//   verifyToken,
+//   authorize('doctor'),
+//   visitController.deleteVisitRecord
+// );
 
 // 🔥 thêm cái này
-router.get(
-  '/medical-record/:id',
-  verifyToken,
-  authorize('doctor', 'patient'),
-  visitController.getVisitsByMedicalRecord
-);
+// router.get(
+//   '/medical-record/:id',
+//   verifyToken,
+//   authorize('doctor', 'patient'),
+//   visitController.getVisitsByMedicalRecord
+// );
 
 module.exports = router;

@@ -15,17 +15,16 @@ const visitRecordSchema = new mongoose.Schema(
       required: true
     },
 
-    department: {
+    department: {               // 🔥 thêm vào
       type: String,
       required: true
     },
 
-    // 🔐 chỉ giữ encrypted
-    ciphertext: { type: String, required: true },
-    nonce: { type: String, required: true },
-    tag: { type: String, required: true },
-    abe_key: { type: String, required: true }
+    symptoms: { type: String, required: true },
+    diagnosis: { type: String, required: true },
+    treatment: { type: String, required: true },
 
+    note: { type: String, default: "" }
   },
   { timestamps: true }
 );

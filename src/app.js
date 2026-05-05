@@ -8,6 +8,14 @@ const adminRoutes = require('./routes/admin.user.route');
 const patientRoutes = require('./routes/patient.route');
 const medicalRecordRoutes = require('./routes/medicalRecord.route');
 const visitRecordRoutes = require('./routes/visitRecord.route');
+const sanitize = require("mongo-sanitize");
+
+const sanitizeMiddleware = (req, res, next) => {
+  if (req.body) req.body = sanitize(req.body);
+  if (req.query) req.query = sanitize(req.query);
+  next();
+};
+
 
 
 
@@ -17,7 +25,7 @@ app.use(cors({
   origin: "http://localhost:5173",
   credentials: true
 }));
-
+app.use(sanitizeMiddleware);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

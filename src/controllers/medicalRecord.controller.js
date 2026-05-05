@@ -8,27 +8,23 @@ const createMedicalRecord = async (req, res) => {
     const { patient_id } = req.body;
 
     if (!patient_id) {
+      console.log('Missing patient_id in request body');
       return res.status(400).json({ message: 'patient_id is required' });
     }
 
-    // check patient tồn tại
     const patient = await Patient.findById(patient_id);
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
     }
 
-    // tránh duplicate record
     const existed = await MedicalRecord.findOne({ patient_id });
     if (existed) {
       return res.status(400).json({
         message: 'Medical record already exists for this patient'
       });
     }
-
     const record = await MedicalRecord.create({
-      patient_id,
-      assigned_doctor_id: req.user.id,
-      department: req.user.department || "Chưa xác định"
+      patient_id
     });
 
     return res.status(201).json({
