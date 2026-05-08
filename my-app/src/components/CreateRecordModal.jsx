@@ -11,10 +11,22 @@ const CreateRecordModal = ({ closeModal, onCreate }) => {
   });
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // ❗ chặn reload
+    e.preventDefault();
+
+    // Validate CCCD
+    if (!/^\d{12}$/.test(formData.cccd)) {
+      alert("CCCD phải gồm đúng 12 chữ số");
+      return;
+    }
+
+    // Validate số điện thoại
+    if (!/^\d+$/.test(formData.phone)) {
+      alert("Số điện thoại chỉ được chứa chữ số");
+      return;
+    }
 
     try {
-      await onCreate(formData); // 🔥 gọi lên Dashboard
+      await onCreate(formData);
     } catch (err) {
       alert("Tạo thất bại: " + err.message);
     }
@@ -45,9 +57,15 @@ const CreateRecordModal = ({ closeModal, onCreate }) => {
             <input
               type="text"
               value={formData.cccd}
+              maxLength={12}
+              pattern="\d{12}"
               onChange={(e) =>
-                setFormData({ ...formData, cccd: e.target.value })
+                setFormData({
+                  ...formData,
+                  cccd: e.target.value.replace(/\D/g, "")
+                })
               }
+              required
             />
           </div>
 
@@ -80,9 +98,14 @@ const CreateRecordModal = ({ closeModal, onCreate }) => {
             <input
               type="text"
               value={formData.phone}
+              pattern="\d+"
               onChange={(e) =>
-                setFormData({ ...formData, phone: e.target.value })
+                setFormData({
+                  ...formData,
+                  phone: e.target.value.replace(/\D/g, "")
+                })
               }
+              required
             />
           </div>
 
