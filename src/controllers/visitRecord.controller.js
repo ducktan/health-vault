@@ -45,7 +45,8 @@ const createVisitRecord = async (req, res) => {
     }
 
     // 🔥 lấy patient_id để build policy
-    const patientUserId = medicalRecord.patient_id?.user_id?.toString();
+    const patientUserId = medicalRecord.patient_id._id.toString();
+    console.log("Patient user ID:", patientUserId);
 
     if (!patientUserId) {
       return res.status(400).json({ message: 'Patient not found' });
@@ -278,12 +279,15 @@ const getVisitsByMedicalRecord = async (req, res) => {
     const results = [];
 
     const doctor = await User.findById(req.user.id);
+    const patient = await Patient.findOne({user_id: req.user.id}); 
+  
    
 
 
     for (const visit of visits) {
       const result = await decryptData({
         ...req.user,
+        patient_id: patient ? patient._id.toString() : null,
         department: doctor.department
       }, {
         ciphertext: visit.ciphertext,

@@ -66,6 +66,7 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
+  console.log('Login attempt:', req.body);
   try {
     const { identifier, password } = req.body || {};
 
