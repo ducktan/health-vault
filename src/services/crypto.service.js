@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = process.env.CRYPTO_API;
 
 async function encryptData(department, data) {
   const res = await fetch(`${BASE_URL}/encrypt`, {
